@@ -1,4 +1,84 @@
 :root {
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-full: 999px;
+
+  /* AppShell sizing */
+  --sidebar-width: 248px;
+  --sidebar-width-collapsed: 72px;
+  --header-height: 64px;
+
+  font: 15px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ---------------------------------------------------------------------
+   Theme tokens. Light is the default enterprise theme; dark is opt-in via
+   [data-theme="dark"] on <html> (set by ThemeContext, persisted to
+   localStorage). Every existing component stylesheet already consumes
+   these exact variable names (--bg, --severity-critical, --status-open,
+   etc.), so re-theming here re-themes the entire app with zero rewrites
+   to any existing component CSS.
+   --------------------------------------------------------------------- */
+:root,
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --bg: #f8fafc;
+  --bg-elevated: #ffffff;
+  --bg-elevated-hover: #f1f5f9;
+  --border: #e5e7eb;
+  --text: #475569;
+  --text-h: #0f172a;
+  --text-muted: #94a3b8;
+
+  --accent: #2563eb;
+  --accent-bg: rgba(37, 99, 235, 0.08);
+
+  --severity-critical: #dc2626;
+  --severity-high: #f59e0b;
+  --severity-medium: #fbbf24;
+  --severity-low: #16a34a;
+
+  --status-open: #d97706;
+  --status-triaged: #7c3aed;
+  --status-investigating: #2563eb;
+  --status-mitigating: #059669;
+  --status-monitoring: #0891b2;
+  --status-resolved: #16a34a;
+  --status-postmortem: #64748b;
+
+  --ai-purple: #7c3aed;
+  --ai-purple-bg: rgba(124, 58, 237, 0.08);
+
+  --success: #16a34a;
+  --warning: #f59e0b;
+  --critical: #dc2626;
+
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.06);
+  --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.1);
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
   --bg: #0b0e14;
   --bg-elevated: #12151d;
   --bg-elevated-hover: #181c27;
@@ -26,14 +106,18 @@
   --ai-purple: #a374ff;
   --ai-purple-bg: rgba(163, 116, 255, 0.14);
 
-  font: 15px/145% system-ui, 'Segoe UI', Roboto, sans-serif;
-  color-scheme: dark;
-  color: var(--text);
+  --success: #2ecc71;
+  --warning: #ff9f43;
+  --critical: #ff4d4f;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.24);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.32);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.45);
+}
+
+html {
   background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  color: var(--text);
 }
 
 * {
@@ -42,6 +126,8 @@
 
 body {
   margin: 0;
+  background: var(--bg);
+  color: var(--text);
 }
 
 #root {
@@ -59,4 +145,18 @@ h3 {
 a {
   color: inherit;
   text-decoration: none;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: var(--radius-full);
 }

@@ -37,15 +37,34 @@ async function ensureUser(email, password) {
   }
 }
 
+// Demo accounts are documented (README) to always sign in with
+// DEFAULT_PASSWORD. Bug found during QA: ensureUser() only ever set the
+// password at creation time — if a demo account's password ever drifted
+// (changed out-of-band, or created with a different password originally),
+// every later re-run of this script silently left it drifted, with no
+// error, so "admin@platform.com / Password@123" from the README could
+// quietly stop working. Only used for the fixed DEFAULT_USERS bootstrap
+// list below — never for the single-user role-assignment CLI path, which
+// must never reset a real user's password as a side effect of assigning a
+// role.
+async function ensureDemoUser(email, password) {
+  const user = await ensureUser(email, password)
+  await getAuth().updateUser(user.uid, { password })
+  return user
+}
+
 async function setupRoles() {
   const users = parseArgs()
+  const isDefaultBootstrap = users === DEFAULT_USERS
 
   for (const { email, role } of users) {
     if (!ROLES.includes(role)) {
       throw new Error(`Invalid role "${role}" for ${email}. Must be one of: ${ROLES.join(', ')}`)
     }
 
-    const user = await ensureUser(email, DEFAULT_PASSWORD)
+    const user = isDefaultBootstrap
+      ? await ensureDemoUser(email, DEFAULT_PASSWORD)
+      : await ensureUser(email, DEFAULT_PASSWORD)
     await getAuth().setCustomUserClaims(user.uid, { role })
 
     // Re-fetch to confirm the claim actually took, rather than trusting the write blindly.

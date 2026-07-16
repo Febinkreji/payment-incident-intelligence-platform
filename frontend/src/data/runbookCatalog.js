@@ -17,6 +17,8 @@ const RUNBOOKS = {
     lastUpdated: '2026-05-12',
     description:
       'Recovery procedure for connection pool exhaustion, lock contention, or sustained write-latency spikes on the primary database cluster.',
+    prerequisites: ['Database admin (psql) access', 'kubectl access to the payment-orchestrator namespace'],
+    escalation: 'If unresolved after 30 minutes, page the Platform Team secondary on-call via PagerDuty.',
     steps: [
       { text: 'Confirm saturation via connection pool and write-latency dashboards.', command: null },
       { text: 'Identify long-running or blocking queries.', command: 'SELECT * FROM pg_stat_activity WHERE state != \'idle\' ORDER BY query_start;' },
@@ -52,6 +54,8 @@ const RUNBOOKS = {
     estimatedRecoveryTime: '10-15 minutes',
     lastUpdated: '2026-04-02',
     description: 'Recovery procedure for elevated Redis cache latency or eviction pressure affecting downstream read performance.',
+    prerequisites: ['redis-cli access to the cache cluster', 'kubectl access to the redis-cache namespace'],
+    escalation: 'If eviction pressure persists after 15 minutes, page the Platform Team on-call.',
     steps: [
       { text: 'Check eviction rate and memory usage on the Redis cluster.', command: 'redis-cli INFO memory' },
       { text: 'Clear stale keys if memory pressure is confirmed.', command: 'redis-cli --scan --pattern "session:*" | xargs redis-cli DEL' },
@@ -77,6 +81,8 @@ const RUNBOOKS = {
     estimatedRecoveryTime: '15-30 minutes',
     lastUpdated: '2026-03-20',
     description: 'Recovery procedure for consumer lag, repeated partition rebalancing, or stalled event processing.',
+    prerequisites: ['kafka-consumer-groups CLI access', 'kubectl access to the payment-orchestrator-consumer deployment'],
+    escalation: 'If lag continues climbing after a restart, page the SRE Team secondary on-call.',
     steps: [
       { text: 'Check consumer group lag across all partitions.', command: 'kafka-consumer-groups --describe --group payment-events --bootstrap-server kafka:9092' },
       { text: 'Restart the affected consumer group.', command: 'kubectl rollout restart deployment/payment-orchestrator-consumer' },
@@ -102,6 +108,8 @@ const RUNBOOKS = {
     estimatedRecoveryTime: '30-60 minutes',
     lastUpdated: '2026-06-01',
     description: 'Failover procedure when a payment service provider or card issuer network is degraded or unavailable.',
+    prerequisites: ['Payments Team routing-config access', 'PSP partner escalation contact on hand'],
+    escalation: 'Immediately notify the Payments Team lead and open a partner escalation ticket.',
     steps: [
       { text: 'Confirm outage via the PSP status page and error-rate dashboards.', command: null },
       { text: 'Fail over routing to the secondary PSP.', command: 'kubectl set env deployment/payment-orchestrator PRIMARY_PSP=secondary' },
@@ -128,6 +136,8 @@ const RUNBOOKS = {
     estimatedRecoveryTime: '15-30 minutes',
     lastUpdated: '2026-05-28',
     description: 'Recovery procedure for CPU/memory saturation, pod crash loops, or repeated container restarts.',
+    prerequisites: ['kubectl access to the affected namespace', 'Access to the release/rollout history'],
+    escalation: 'If CrashLoopBackOff persists after a rollback, page the SRE Team on-call.',
     steps: [
       { text: 'Check pod status and restart counts.', command: 'kubectl get pods -l app=payment-orchestrator -o wide' },
       { text: 'Inspect the crash-looping pod\'s logs for the failure signature.', command: 'kubectl logs -l app=payment-orchestrator --previous --tail=200' },
@@ -153,6 +163,8 @@ const RUNBOOKS = {
     estimatedRecoveryTime: '15-25 minutes',
     lastUpdated: '2026-02-14',
     description: 'Recovery procedure for expired certificates, failed TLS handshakes, or secrets that need emergency rotation.',
+    prerequisites: ['cert-manager / kubectl access', 'Secrets rotation approval from Security on-call'],
+    escalation: 'Certificate or secret rotation always requires Security on-call sign-off before proceeding.',
     steps: [
       { text: 'Check certificate expiry across affected services.', command: 'kubectl get certificate -A' },
       { text: 'Force-renew the expired certificate.', command: 'kubectl cert-manager renew payment-api-tls' },
@@ -178,6 +190,8 @@ const RUNBOOKS = {
     estimatedRecoveryTime: '10-20 minutes',
     lastUpdated: '2026-06-10',
     description: 'Recovery procedure for a regression introduced by a recent deployment or configuration change.',
+    prerequisites: ['kubectl rollout access', 'Feature-flag admin access'],
+    escalation: 'If rollback does not resolve the regression, page the Platform Team on-call.',
     steps: [
       { text: 'Review the most recent release and configuration diff.', command: 'kubectl rollout history deployment/checkout-api' },
       { text: 'Roll back to the previous stable release.', command: 'kubectl rollout undo deployment/checkout-api' },
@@ -203,6 +217,8 @@ const RUNBOOKS = {
     estimatedRecoveryTime: '20-45 minutes',
     lastUpdated: '2026-01-30',
     description: 'Recovery procedure for DNS resolution failures, firewall misconfiguration, or elevated packet loss between services.',
+    prerequisites: ['kubectl exec access', 'Network/firewall policy change history'],
+    escalation: 'Any firewall or network policy revert requires network on-call sign-off.',
     steps: [
       { text: 'Confirm DNS resolution from the affected pod.', command: 'kubectl exec -it deploy/checkout-api -- nslookup payment-orchestrator' },
       { text: 'Check recent firewall / security group changes.', command: null },
@@ -228,6 +244,8 @@ const RUNBOOKS = {
     estimatedRecoveryTime: '10-20 minutes',
     lastUpdated: '2026-05-05',
     description: 'Recovery procedure when overly aggressive rate limiting is rejecting legitimate traffic.',
+    prerequisites: ['API gateway config access'],
+    escalation: 'Notify affected merchants proactively if legitimate rejection rate exceeds 5%.',
     steps: [
       { text: 'Check current rate-limit thresholds against traffic volume.', command: null },
       { text: 'Temporarily raise the rate limit for the affected route.', command: 'kubectl set env deployment/api-gateway RATE_LIMIT_RPS=500' },
@@ -253,6 +271,8 @@ const RUNBOOKS = {
     estimatedRecoveryTime: 'Varies',
     lastUpdated: '2026-01-01',
     description: 'No specific automated runbook matched this incident\'s root cause — follow general triage steps and escalate as needed.',
+    prerequisites: ['Access to the incident\'s evidence workspace and AI analysis'],
+    escalation: 'Escalate to the owning team\'s on-call if root cause is unclear after initial triage.',
     steps: [
       { text: 'Review AI root cause analysis and correlated evidence above.', command: null },
       { text: 'Check the service\'s dashboard for anomalies.', command: null },
@@ -295,4 +315,10 @@ export function resolveRunbook(runbookLink) {
 
 export function getRunbookByKey(key) {
   return RUNBOOKS[key] || RUNBOOKS.manual
+}
+
+// For the standalone Runbooks browser page — the full static catalog, not
+// resolved against any particular incident.
+export function getAllRunbooks() {
+  return Object.values(RUNBOOKS)
 }

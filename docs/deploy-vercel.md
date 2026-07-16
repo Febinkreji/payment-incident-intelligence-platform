@@ -31,7 +31,7 @@ Vite only exposes variables prefixed `VITE_` to the client bundle — this match
 
 ## 3. Client-side routing
 
-This app uses `react-router-dom` with browser history routing (`/incidents/:id`, `/analytics`, etc.). Vercel's Vite framework preset already rewrites unknown paths to `index.html`, so deep links and refreshes on non-root routes work without extra configuration. If you ever switch to a custom `vercel.json`, keep a catch-all rewrite to `/index.html`.
+This app uses `react-router-dom` with browser history routing (`/incidents/:id`, `/analytics`, etc.). `frontend/vercel.json` includes an explicit catch-all rewrite to `/index.html`, so deep links and refreshes on non-root routes work regardless of framework auto-detection.
 
 ## 4. Firebase Authentication — authorized domains
 

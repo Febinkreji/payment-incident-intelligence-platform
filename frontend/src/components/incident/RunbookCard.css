@@ -298,6 +298,39 @@
   color: var(--accent);
 }
 
+.runbook-prerequisites li {
+  cursor: default;
+  padding-left: 8px;
+}
+
+.runbook-prerequisites li:hover {
+  background: none;
+}
+
+.runbook-prerequisites li::before {
+  content: '•';
+  margin-right: 8px;
+  color: var(--text-muted);
+}
+
+.runbook-escalation {
+  background: color-mix(in srgb, var(--severity-high) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--severity-high) 30%, var(--border));
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.runbook-escalation h3 {
+  color: var(--severity-high);
+}
+
+.runbook-escalation p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-h);
+  line-height: 1.5;
+}
+
 .runbook-links {
   display: flex;
   flex-wrap: wrap;

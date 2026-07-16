@@ -1,6 +1,9 @@
-import { Navigate, useLocation } from 'react-router-dom'
+import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
+// Used two ways: wrapping explicit `children` (legacy call sites), or as a
+// layout route with no children — in which case it renders an <Outlet />
+// so it can guard an entire nested route tree (e.g. the whole AppLayout).
 export function ProtectedRoute({ children }) {
   const { user, role, loading } = useAuth()
   const location = useLocation()
@@ -26,5 +29,5 @@ export function ProtectedRoute({ children }) {
     )
   }
 
-  return children
+  return children ?? <Outlet />
 }

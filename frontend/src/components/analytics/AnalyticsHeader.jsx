@@ -1,57 +1,24 @@
-import { useEffect, useState } from 'react'
-import { useAuth } from '../../context/AuthContext'
+import { PageHeader } from '../ui/PageHeader'
 import './AnalyticsHeader.css'
 
 function formatClock(date) {
   return date.toLocaleTimeString('en-US', { hour12: false })
 }
 
-export function AnalyticsHeader({ lastRefresh, notificationCount, onRefresh }) {
-  const { user, role } = useAuth()
-  const [now, setNow] = useState(new Date())
-
-  useEffect(() => {
-    const interval = setInterval(() => setNow(new Date()), 1000)
-    return () => clearInterval(interval)
-  }, [])
-
+// Slimmed down for the enterprise redesign — the platform title, theme,
+// notifications, and profile now live in the global TopHeader/Sidebar, so
+// this only keeps what's unique to Analytics: the live-refresh control.
+export function AnalyticsHeader({ lastRefresh, onRefresh }) {
   return (
-    <header className="analytics-header">
-      <div className="analytics-header-titles">
-        <h1>PIP (Payment Incident Platform)</h1>
-        <p>Analytics Dashboard</p>
-      </div>
-
-      <div className="analytics-header-status">
-        <div className="analytics-header-clock">
-          <span className="analytics-header-clock-label">Current Time</span>
-          <span className="analytics-header-clock-value">{formatClock(now)}</span>
-        </div>
-
-        <div className="analytics-header-clock">
-          <span className="analytics-header-clock-label">Last Refresh</span>
-          <span className="analytics-header-clock-value">
-            {lastRefresh ? formatClock(lastRefresh) : '—'}
-          </span>
-        </div>
-
+    <PageHeader
+      title="Analytics"
+      subtitle="Executive-quality trends, distributions, and impact analysis."
+      actions={
         <button type="button" className="analytics-header-live" onClick={onRefresh}>
           <span className="analytics-header-pulse" />
-          Live
+          Live{lastRefresh ? ` · refreshed ${formatClock(lastRefresh)}` : ''}
         </button>
-
-        <button type="button" className="analytics-header-icon-button" title="Notifications">
-          🔔
-          {notificationCount > 0 && (
-            <span className="analytics-header-badge">{notificationCount}</span>
-          )}
-        </button>
-
-        <div className="analytics-header-profile">
-          <span className="analytics-header-profile-email">{user?.email}</span>
-          {role && <span className="analytics-header-profile-role">{role}</span>}
-        </div>
-      </div>
-    </header>
+      }
+    />
   )
 }

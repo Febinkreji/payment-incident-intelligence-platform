@@ -1,5 +1,6 @@
 import { AnalyticsCard } from './AnalyticsCard'
-import { THEME_COLORS, clamp, formatCompactCurrency } from './analyticsUtils'
+import { THEME_COLORS, formatCompactCurrency } from './analyticsUtils'
+import { deriveExecutiveMetrics } from '../../utils/executiveMetrics'
 import './ExecutiveOverview.css'
 
 // Fed entirely by dashboardStats + analytics (both single-document reads) —
@@ -11,7 +12,20 @@ export function ExecutiveOverview({ dashboardStats, analytics }) {
 
   const merchantsImpacted = analytics.merchantDistribution.length
 
-  const availability = clamp(100 - dashboardStats.criticalIncidents * 0.05, 95, 100)
+  // MTTD/MTTR use the same realistic demo baseline as the Executive
+  // Dashboard (deriveExecutiveMetrics) instead of the backend's raw
+  // placeholder strings (dashboardStats.mttr/.mttd) — QA found these two
+  // pages showing different values for the same metric (32m/4m here vs.
+  // 28m 31s/2m 18s on the Dashboard). No incidents list is needed for these
+  // two fields, so no new fetch is introduced here.
+  const executiveMetrics = deriveExecutiveMetrics(dashboardStats)
+
+  // Same fix as above — this page previously computed Availability with a
+  // different formula (0.05 multiplier, 95-100 clamp) than the Executive
+  // Dashboard (0.03 multiplier, 99.5 floor), so the two pages showed
+  // different numbers (98.85% here vs. 99.50% on the Dashboard) for the
+  // same criticalIncidents count.
+  const availability = parseFloat(executiveMetrics.availability)
   const revenueProtected = dashboardStats.resolvedIncidents * 42500
   const avgResolution = (analytics.resolutionStats?.avgResolutionMs || 0) / 60000
 
@@ -70,13 +84,13 @@ export function ExecutiveOverview({ dashboardStats, analytics }) {
     {
       icon: '⏱️',
       title: 'MTTR',
-      value: dashboardStats.mttr,
+      value: executiveMetrics.mttr,
       tone: 'accent',
     },
     {
       icon: '🎯',
       title: 'MTTD',
-      value: dashboardStats.mttd,
+      value: executiveMetrics.mttd,
       tone: 'accent',
     },
     {

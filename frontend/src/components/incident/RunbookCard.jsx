@@ -27,8 +27,12 @@ function CopyButton({ command }) {
 // recommendation's existing `runbookLink` field — the SAME template is shared
 // across every incident with a matching root cause. Nothing is stored or
 // read per incident; step-completion state is local to this component only.
-export function RunbookCard({ runbookLink }) {
-  const [runbook, setRunbook] = useState(() => resolveRunbook(runbookLink))
+// `runbookKey` lets callers (e.g. the standalone Runbooks browser) open a
+// specific template directly, bypassing keyword resolution.
+export function RunbookCard({ runbookLink, runbookKey }) {
+  const [runbook, setRunbook] = useState(() =>
+    runbookKey ? getRunbookByKey(runbookKey) : resolveRunbook(runbookLink)
+  )
   const [expanded, setExpanded] = useState(true)
   const [completedSteps, setCompletedSteps] = useState(() => new Set())
   const [completedChecks, setCompletedChecks] = useState(() => new Set())
@@ -96,6 +100,24 @@ export function RunbookCard({ runbookLink }) {
       {expanded && (
         <>
           <p className="runbook-description">{runbook.description}</p>
+
+          {runbook.prerequisites?.length > 0 && (
+            <div className="runbook-section">
+              <h3>Prerequisites</h3>
+              <ul className="runbook-checklist runbook-prerequisites">
+                {runbook.prerequisites.map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {runbook.escalation && (
+            <div className="runbook-section runbook-escalation">
+              <h3>Escalation</h3>
+              <p>{runbook.escalation}</p>
+            </div>
+          )}
 
           <div className="runbook-section">
             <div className="runbook-section-header">

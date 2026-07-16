@@ -1,0 +1,120 @@
+.report-summary-row {
+  margin-bottom: var(--space-8);
+}
+
+.report-summary-card {
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.report-summary-card strong {
+  font-size: 1.3rem;
+  color: var(--text-h);
+}
+
+.report-section {
+  padding: var(--space-5) var(--space-6);
+  margin-bottom: var(--space-6);
+}
+
+.report-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.report-section-header h2 {
+  font-size: 1rem;
+}
+
+.report-section-header p {
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.report-export-button {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 7px 14px;
+  color: var(--text-h);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  font: inherit;
+  white-space: nowrap;
+  transition: border-color 0.12s ease;
+}
+
+.report-export-button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.report-export-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.report-export-primary:hover {
+  color: #fff;
+  opacity: 0.9;
+}
+
+.report-table-wrap {
+  overflow-x: auto;
+}
+
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.report-table th {
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.report-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.report-table tr:last-child td {
+  border-bottom: none;
+}
+
+@media print {
+  .sidebar,
+  .top-header,
+  .app-footer,
+  .page-header-actions,
+  .report-export-button {
+    display: none !important;
+  }
+
+  .app-content {
+    max-width: none;
+    padding: 0;
+  }
+
+  .report-section {
+    box-shadow: none;
+    break-inside: avoid;
+  }
+}

@@ -184,7 +184,10 @@ export const EVIDENCE_CATALOG = [
 ]
 
 // Root-cause keyword -> evidence categories/keys that should read as elevated.
-const CAUSE_FOCUS = [
+// Exported so the Evidence Sources page can use the identical mapping when
+// aggregating across a list of incidents (rather than one incident's own
+// investigation), without duplicating this table.
+export const CAUSE_FOCUS = [
   { match: /psp|issuer/i, keys: ['pspResponse', 'paymentGatewayMetrics', 'acquirerResponse', 'issuerResponse', 'visaNetwork', 'mastercardNetwork'] },
   { match: /database|sql|connection pool/i, keys: ['database', 'databaseReplication', 'connectionPool', 'cacheHitRatio'] },
   { match: /redis/i, keys: ['redis', 'cacheHitRatio'] },

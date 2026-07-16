@@ -37,7 +37,6 @@ export function AnalyticsDashboard() {
   // by ActivityFeed/ExportPanel, which need individual incident rows. Every
   // aggregate section below is fed by dashboardStats/analytics instead.
   const [incidents, setIncidents] = useState([])
-  const [notificationCount, setNotificationCount] = useState(0)
   const [status, setStatus] = useState('loading')
   const [errorMessage, setErrorMessage] = useState('')
   const [lastRefresh, setLastRefresh] = useState(null)
@@ -49,19 +48,17 @@ export function AnalyticsDashboard() {
     try {
       const hasFilters = filters && Object.values(filters).some(Boolean)
 
-      const [dashboardData, analyticsData, incidentsData, notifications] = await Promise.all([
+      const [dashboardData, analyticsData, incidentsData] = await Promise.all([
         fetchJson('/dashboard'),
         fetchJson('/analytics'),
         hasFilters
           ? fetchJson(`/search?${buildSearchQuery(filters)}`).then((result) => result.results)
           : fetchJson(`/incidents?pageSize=${RECENT_INCIDENTS_PAGE_SIZE}`).then((page) => page.incidents),
-        fetchJson('/notifications').catch(() => []),
       ])
 
       setDashboardStats(dashboardData)
       setAnalytics(analyticsData)
       setIncidents(incidentsData)
-      setNotificationCount(notifications.length)
       setIsFiltered(Boolean(hasFilters))
       setLastRefresh(new Date())
       setStatus('success')
@@ -109,11 +106,7 @@ export function AnalyticsDashboard() {
 
   return (
     <div className="analytics-dashboard">
-      <AnalyticsHeader
-        lastRefresh={lastRefresh}
-        notificationCount={notificationCount}
-        onRefresh={() => loadData(null)}
-      />
+      <AnalyticsHeader lastRefresh={lastRefresh} onRefresh={() => loadData(null)} />
 
       <AnalyticsFilters onApply={loadData} onReset={() => loadData(null)} />
 

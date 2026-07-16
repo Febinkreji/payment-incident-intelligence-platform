@@ -1,0 +1,68 @@
+.profile-card {
+  padding: var(--space-6);
+  margin-bottom: var(--space-6);
+}
+
+.profile-hero {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+.profile-hero h2 {
+  font-size: 1.15rem;
+  margin-bottom: 2px;
+}
+
+.profile-hero p {
+  margin: 0 0 8px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.profile-role-badge {
+  display: inline-flex;
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-radius: 999px;
+  padding: 3px 12px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.profile-card h3 {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  margin-bottom: var(--space-4);
+}
+
+.profile-detail-list {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.profile-detail-list dt {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.profile-detail-list dd {
+  margin: 2px 0 0;
+  font-size: 0.9rem;
+  color: var(--text-h);
+  font-weight: 500;
+}
+
+.profile-note {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text);
+  line-height: 1.6;
+}

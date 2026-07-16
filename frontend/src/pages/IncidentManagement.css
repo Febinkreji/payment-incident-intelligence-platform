@@ -1,0 +1,41 @@
+.incident-mgmt-filters {
+  padding: var(--space-5);
+  margin-bottom: var(--space-8);
+}
+
+.incident-mgmt-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--space-4);
+}
+
+.incident-mgmt-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.incident-mgmt-pagination button {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 7px 16px;
+  color: var(--text-h);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85rem;
+  transition: border-color 0.12s ease;
+}
+
+.incident-mgmt-pagination button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.incident-mgmt-pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
