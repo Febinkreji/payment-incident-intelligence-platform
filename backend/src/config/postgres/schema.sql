@@ -79,9 +79,20 @@ CREATE TABLE import_jobs (
     error_count      INTEGER,
     started_at       TIMESTAMPTZ,
     completed_at     TIMESTAMPTZ,
-    created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CONSTRAINT uq_import_jobs_checksum UNIQUE (file_checksum)
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Sprint 3C fix: a blanket UNIQUE(file_checksum) blocked ever retrying a file
+-- whose first attempt failed (e.g. every row rejected by a not-yet-populated
+-- dimension FK) — "SUCCEEDED" here means the ETL process ran to completion,
+-- not that every row succeeded, so a fully-failed run still counted as a
+-- taken checksum forever. A partial index only reserves the checksum once a
+-- run has actually completed cleanly (status SUCCEEDED and zero row errors),
+-- so a genuine retry after fixing an upstream data problem is still allowed,
+-- while an already-clean file can never be silently reimported/duplicated.
+CREATE UNIQUE INDEX uq_import_jobs_checksum_on_clean_success
+    ON import_jobs (file_checksum)
+    WHERE status = 'SUCCEEDED' AND COALESCE(error_count, 0) = 0;
 
 -- Persistent row-level failure tracking (Sprint 3A.5). Every row-level
 -- failure the ETL framework encounters (CSV parse error, transform error,

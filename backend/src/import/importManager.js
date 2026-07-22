@@ -34,6 +34,21 @@ async function finalizeImportJob(client, importJobId, { status, rowCount, errorC
   )
 }
 
+// "SUCCEEDED" only means the ETL process ran to completion, not that every
+// row succeeded (a run can finish with error_count == row_count). Only a run
+// that both completed AND had zero row errors counts as "this exact file is
+// already fully, cleanly imported" — that's the one case worth skipping
+// outright rather than re-running.
+async function findCleanlyImportedJob(client, { datasetType, fileChecksum }) {
+  const result = await client.query(
+    `SELECT import_job_id FROM import_jobs
+     WHERE dataset_type = $1 AND file_checksum = $2 AND status = 'SUCCEEDED' AND COALESCE(error_count, 0) = 0
+     LIMIT 1`,
+    [datasetType, fileChecksum]
+  )
+  return result.rows[0]?.import_job_id || null
+}
+
 // Imports (or dry-runs) a single CSV file for one dataset type. Real runs are
 // not wrapped in one giant transaction — each batch (and each row-level
 // fallback insert) commits on its own, so a failure partway through a
@@ -65,6 +80,16 @@ async function importFile({
   if (!dryRun) {
     const fileChecksum = await computeFileChecksum(filePath)
     client = await pool.connect()
+
+    const existingCleanJobId = await findCleanlyImportedJob(client, { datasetType, fileChecksum })
+    if (existingCleanJobId) {
+      client.release()
+      console.log(
+        `[import:${datasetType}] ${sourceFileName} is already fully imported (import_job_id=${existingCleanJobId}) — skipping.`
+      )
+      return { skipped: true, reason: 'already_imported', previousImportJobId: existingCleanJobId }
+    }
+
     importJobId = await createImportJob(client, { datasetType, sourceFileName, fileChecksum })
   }
 
