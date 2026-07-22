@@ -19,10 +19,52 @@ export function AIInvestigationPanel({ investigation }) {
 
       <p>{investigation.executiveSummary}</p>
 
+      {investigation.detectedIncidents?.length > 1 && (
+        <>
+          <strong>Detected Incidents</strong>
+          <ul className="investigation-ai-list">
+            {investigation.detectedIncidents.map((d, index) => (
+              <li key={index}>
+                {d.ruleName || d.incidentType} <span className="investigation-ai-inline-badge">{d.severity}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
       {investigation.probableRootCause && (
         <>
           <strong>Probable root cause</strong>
           <p>{investigation.probableRootCause}</p>
+        </>
+      )}
+
+      {investigation.alternativeExplanations?.length > 0 && (
+        <>
+          <strong>Alternative explanations</strong>
+          <ul className="investigation-ai-list">
+            {investigation.alternativeExplanations.map((explanation, index) => (
+              <li key={index}>{explanation}</li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {investigation.businessImpact && (
+        <>
+          <strong>Business impact</strong>
+          <p>{investigation.businessImpact}</p>
+        </>
+      )}
+
+      {investigation.evidenceUsed?.length > 0 && (
+        <>
+          <strong>Evidence referenced</strong>
+          <ul className="investigation-ai-list">
+            {investigation.evidenceUsed.map((note, index) => (
+              <li key={index}>{note}</li>
+            ))}
+          </ul>
         </>
       )}
 

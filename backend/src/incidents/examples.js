@@ -47,6 +47,7 @@ function makeSimulatedCorrelation(overrides = {}) {
     payment: null,
     orders: [],
     payments: [],
+    paymentEvents: [],
     apiLogs: [],
     terminalEvents: [],
     relatedPayments: [],
@@ -55,6 +56,24 @@ function makeSimulatedCorrelation(overrides = {}) {
     warnings: [],
     ...overrides,
   }
+}
+
+// Sprint 9C.3: a payment is a Payments aggregate PLUS its Payment Events
+// lifecycle log, never a single row — this builds a realistic multi-event
+// sequence (the ~3-5 events per payment pattern discovered in Sprint 9C.1)
+// instead of one flat payment_status. `lifecycle` is ordered oldest-first;
+// `minutesOffset` is minutes since a fixed base time, purely for readable,
+// deterministic timestamps (Date.now()/Math.random() are avoided so this
+// fixture stays reproducible).
+function makeSimulatedPaymentEvents(paymentId, lifecycle) {
+  const baseTimeMs = new Date('2026-01-01T00:00:00Z').getTime()
+  return lifecycle.map(({ status, minutesOffset, statusMessage }, i) => ({
+    entry_id: `${paymentId}-evt-${i + 1}`,
+    payment_id: paymentId,
+    payment_status: status,
+    event_timestamp: new Date(baseTimeMs + minutesOffset * 60000).toISOString(),
+    status_message: statusMessage || null,
+  }))
 }
 
 async function main() {
@@ -72,20 +91,35 @@ async function main() {
   printIncidents('REAL: busy terminal, multiple unpaid resolved orders', detectIncidents(realTerminalCorrelation))
 
   // --- Example 3: SIMULATED — a clean, fully-correlated payment with no
-  // warnings, evidence, or gaps. Expect no incident.
+  // warnings, evidence, or gaps. Expect no incident. current_status is the
+  // derived result of the 4-event lifecycle below (Current Status
+  // Derivation Rule), not a value set directly on the payment.
+  const sim01Events = makeSimulatedPaymentEvents('sim-payment-01', [
+    { status: 'PAYMENT_PENDING', minutesOffset: 0 },
+    { status: 'PAYMENT_AUTHORIZING', minutesOffset: 1 },
+    { status: 'PAYMENT_PROCESSING', minutesOffset: 3 },
+    { status: 'PAYMENT_COMPLETED', minutesOffset: 6 },
+  ])
   const cleanCorrelation = makeSimulatedCorrelation({
     order: { order_id: 'sim-order-01', order_status: 'PAYMENT_COMPLETED' },
     orders: [{ order_id: 'sim-order-01', order_status: 'PAYMENT_COMPLETED' }],
-    payment: { payment_id: 'sim-payment-01', payment_status: 'PAYMENT_COMPLETED' },
-    payments: [{ payment_id: 'sim-payment-01', payment_status: 'PAYMENT_COMPLETED' }],
+    payment: { payment_id: 'sim-payment-01', current_status: 'PAYMENT_COMPLETED', current_status_at: sim01Events[3].event_timestamp },
+    payments: [{ payment_id: 'sim-payment-01', current_status: 'PAYMENT_COMPLETED', current_status_at: sim01Events[3].event_timestamp }],
+    paymentEvents: sim01Events,
     apiLogs: [{ request_id: 'sim-req-01', status_code: 200, call_type: 'POST', api_url: '/api/payments' }],
   })
   printIncidents('SIMULATED: fully-correlated successful payment (expect no incident)', detectIncidents(cleanCorrelation))
 
   // --- Example 4: SIMULATED — payment exists, api_logs is empty.
+  const sim02Events = makeSimulatedPaymentEvents('sim-payment-02', [
+    { status: 'PAYMENT_PENDING', minutesOffset: 0 },
+    { status: 'PAYMENT_PROCESSING', minutesOffset: 2 },
+    { status: 'PAYMENT_COMPLETED', minutesOffset: 5 },
+  ])
   const missingApiActivity = makeSimulatedCorrelation({
-    payment: { payment_id: 'sim-payment-02', payment_status: 'PAYMENT_COMPLETED' },
-    payments: [{ payment_id: 'sim-payment-02', payment_status: 'PAYMENT_COMPLETED' }],
+    payment: { payment_id: 'sim-payment-02', current_status: 'PAYMENT_COMPLETED', current_status_at: sim02Events[2].event_timestamp },
+    payments: [{ payment_id: 'sim-payment-02', current_status: 'PAYMENT_COMPLETED', current_status_at: sim02Events[2].event_timestamp }],
+    paymentEvents: sim02Events,
     apiLogs: [],
   })
   printIncidents('SIMULATED: payment with zero api_logs (expect MISSING_API_ACTIVITY)', detectIncidents(missingApiActivity))
@@ -107,10 +141,18 @@ async function main() {
   })
   printIncidents('SIMULATED: api_log with status_code 502 (expect API_FAILURE)', detectIncidents(apiFailure))
 
-  // --- Example 7: SIMULATED — a payment with status PAYMENT_FAILED.
+  // --- Example 7: SIMULATED — a payment whose lifecycle ends in
+  // PAYMENT_FAILED, with a real decline message on the failure event itself
+  // (paymentFailureRule pulls this into evidence — see incident.evidence).
+  const sim04Events = makeSimulatedPaymentEvents('sim-payment-04', [
+    { status: 'PAYMENT_PENDING', minutesOffset: 0 },
+    { status: 'PAYMENT_PROCESSING', minutesOffset: 2 },
+    { status: 'PAYMENT_FAILED', minutesOffset: 4, statusMessage: 'Card declined by issuer — insufficient funds' },
+  ])
   const paymentFailure = makeSimulatedCorrelation({
-    payment: { payment_id: 'sim-payment-04', payment_status: 'PAYMENT_FAILED' },
-    payments: [{ payment_id: 'sim-payment-04', payment_status: 'PAYMENT_FAILED' }],
+    payment: { payment_id: 'sim-payment-04', current_status: 'PAYMENT_FAILED', current_status_at: sim04Events[2].event_timestamp },
+    payments: [{ payment_id: 'sim-payment-04', current_status: 'PAYMENT_FAILED', current_status_at: sim04Events[2].event_timestamp }],
+    paymentEvents: sim04Events,
     apiLogs: [{ request_id: 'sim-req-04', status_code: 200, call_type: 'POST', api_url: '/api/payments' }],
   })
   printIncidents('SIMULATED: payment with status PAYMENT_FAILED (expect PAYMENT_FAILURE)', detectIncidents(paymentFailure))
@@ -125,4 +167,4 @@ if (require.main === module) {
   })
 }
 
-module.exports = { main, makeSimulatedCorrelation }
+module.exports = { main, makeSimulatedCorrelation, makeSimulatedPaymentEvents }

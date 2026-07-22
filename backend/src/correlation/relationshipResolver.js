@@ -112,6 +112,87 @@ async function getApiLogsByTerminalId(terminalId, limit) {
   return result.rows
 }
 
+// Sprint 9D.6: standalone, paginated api_logs browsing for the new
+// /api/api-logs/* endpoints — distinct from getApiLogsBy*() above, which
+// exist to feed the Correlation Engine's fixed, unpaginated fan-out. Every
+// filter maps directly onto an existing index (merchant_id/order_id/
+// payment_id/terminal_id/status_code all indexed since Sprint 2A/9D.2), and
+// the total count is fetched in the SAME query via COUNT(*) OVER() rather
+// than a second round-trip.
+async function getApiLogsPage({
+  orderId,
+  paymentId,
+  terminalId,
+  merchantId,
+  statusCodeMin,
+  statusCodeMax,
+  limit = 50,
+  offset = 0,
+  sort = 'asc',
+}) {
+  const conditions = []
+  const params = []
+
+  if (orderId) {
+    params.push(orderId)
+    conditions.push(`order_id = $${params.length}`)
+  }
+  if (paymentId) {
+    params.push(paymentId)
+    conditions.push(`payment_id = $${params.length}`)
+  }
+  if (terminalId) {
+    params.push(terminalId)
+    conditions.push(`terminal_id = $${params.length}`)
+  }
+  if (merchantId) {
+    params.push(merchantId)
+    conditions.push(`merchant_id = $${params.length}`)
+  }
+  if (statusCodeMin !== null && statusCodeMin !== undefined) {
+    params.push(statusCodeMin)
+    conditions.push(`status_code >= $${params.length}`)
+  }
+  if (statusCodeMax !== null && statusCodeMax !== undefined) {
+    params.push(statusCodeMax)
+    conditions.push(`status_code <= $${params.length}`)
+  }
+
+  // Defensive only — every route that calls this always supplies exactly
+  // one entity filter by construction (one path param per route), so this
+  // should never actually trigger; it guards against an unbounded scan of
+  // 1.5M+ rows if this function is ever called without one.
+  if (conditions.length === 0) {
+    throw new Error('getApiLogsPage requires at least one filter (orderId, paymentId, terminalId, or merchantId)')
+  }
+
+  const orderDirection = sort === 'desc' ? 'DESC' : 'ASC'
+  const whereClause = conditions.join(' AND ')
+
+  // Deliberately TWO queries run in parallel, not one with COUNT(*) OVER().
+  // merchant_id is only 1-2 distinct values across the entire 1.57M-row
+  // table (essentially every row matches), so a merchant-scoped lookup is
+  // non-selective — combining COUNT(*) OVER() with ORDER BY/LIMIT forces
+  // Postgres to materialize and sort the FULL matching set before it can
+  // apply the window function, which defeats the "top-N" heap-sort
+  // optimization ORDER BY+LIMIT alone gets. Measured directly (Sprint 9D.6):
+  // the combined form took 74+ seconds on a merchant filter and was
+  // cancelled; splitting into a plain COUNT (no ORDER BY, uses the existing
+  // index) plus a plain LIMIT fetch (fast top-N sort, ~10ms) is both
+  // correct and, for this non-selective case, dramatically faster overall.
+  // For the selective filters (order/payment/terminal_id) both queries are
+  // already fast on their own indexes, so this costs nothing there.
+  const [countResult, dataResult] = await Promise.all([
+    pool.query(`SELECT COUNT(*) FROM api_logs WHERE ${whereClause}`, params),
+    pool.query(
+      `SELECT * FROM api_logs WHERE ${whereClause} ORDER BY request_ts ${orderDirection} LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+      [...params, limit, offset]
+    ),
+  ])
+
+  return { rows: dataResult.rows, total: Number(countResult.rows[0].count) }
+}
+
 async function getTerminalEventsByOrderId(orderId) {
   if (!orderId) return []
   const result = await pool.query(
@@ -142,9 +223,24 @@ async function getTerminalEventsByTransactionIdInferred(candidatePaymentIds) {
   return result.rows
 }
 
+// Batched lookup of a payment's full lifecycle log, ordered to match the
+// Current Status Derivation Rule (event_timestamp DESC, entry_id DESC) — the
+// same order the idx_payment_events_payment_id_event_ts_entry_id index
+// serves directly. Callers that need chronological (oldest-first) order for
+// a narrative — e.g. the Timeline — re-sort explicitly rather than relying
+// on this default; see paymentEventModel.sortChronological.
+async function getPaymentEventsByPaymentIds(paymentIds) {
+  if (!paymentIds || paymentIds.length === 0) return []
+  const result = await pool.query(
+    'SELECT * FROM payment_events WHERE payment_id = ANY($1) ORDER BY payment_id, event_timestamp DESC, entry_id DESC',
+    [paymentIds]
+  )
+  return result.rows
+}
+
 // payment_terminal_code is the normalized decomposition of
-// payments.terminal_code_raw — currently unpopulated by any importer built
-// so far, so this will legitimately return [] until that's built.
+// payment_events.terminal_codes_raw — currently unpopulated by any importer
+// built so far, so this will legitimately return [] until that's built.
 async function getTerminalCodesForPayment(paymentId) {
   if (!paymentId) return []
   const result = await pool.query(
@@ -168,10 +264,12 @@ module.exports = {
   getPaymentByTransactionId,
   getPaymentsByOrderId,
   getPaymentsByOrderIds,
+  getPaymentEventsByPaymentIds,
   getRelatedPayments,
   getApiLogsByOrderId,
   getApiLogsByPaymentIds,
   getApiLogsByTerminalId,
+  getApiLogsPage,
   getTerminalEventsByOrderId,
   getTerminalEventsByTerminalId,
   getTerminalEventsByTransactionIdInferred,

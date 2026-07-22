@@ -18,9 +18,12 @@ function evaluate(correlation) {
 
   return {
     ruleId: RULE_ID,
+    ruleName: 'Payment Not Created',
     incidentType: INCIDENT_TYPE,
     baseSeverity: 'HIGH',
     baseConfidence: 'MEDIUM',
+    description: `${resolvedOrdersWithNoPayment.length} order(s) reached a resolved status with no linked payment.`,
+    suggestedNextAction: 'Reconcile against the payment gateway directly using the order_id/reference to check for a missed webhook.',
     evidence: resolvedOrdersWithNoPayment.map((o) => ({
       type: 'order',
       record: o,

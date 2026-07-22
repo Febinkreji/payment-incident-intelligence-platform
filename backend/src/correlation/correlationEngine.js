@@ -59,10 +59,13 @@ async function correlateByOrderId(orderId, options = {}) {
 
   const paymentIds = payments.map((p) => p.payment_id)
 
-  const [apiLogsViaPayments, terminalEventsInferred] = await Promise.all([
+  const [apiLogsViaPayments, terminalEventsInferred, paymentEvents] = await Promise.all([
     resolver.getApiLogsByPaymentIds(paymentIds),
     resolver.getTerminalEventsByTransactionIdInferred(paymentIds),
+    resolver.getPaymentEventsByPaymentIds(paymentIds),
   ])
+
+  result.paymentEvents = paymentEvents
 
   result.apiLogs = dedupeById([...apiLogsDirect, ...apiLogsViaPayments], 'request_id')
 
@@ -74,6 +77,9 @@ async function correlateByOrderId(orderId, options = {}) {
   )
 
   if (payments.length === 0) result.warnings.push('No payments found for this order in the current sample data')
+  if (payments.length > 0 && paymentEvents.length === 0) {
+    result.warnings.push('Payment(s) found for this order but no payment_events are linked to them')
+  }
   if (result.apiLogs.length === 0) result.warnings.push('No API logs found for this order')
   if (result.terminalEvents.length === 0 && result.inferredMatches.length === 0) {
     result.warnings.push('No terminal events found for this order')
@@ -103,15 +109,17 @@ async function correlateByPaymentId(paymentId, options = {}) {
     return result
   }
 
-  const [order, relatedPayments, terminalCodes] = await Promise.all([
+  const [order, relatedPayments, terminalCodes, paymentEvents] = await Promise.all([
     resolver.getOrderById(payment.order_id),
     resolver.getRelatedPayments(payment),
     resolver.getTerminalCodesForPayment(payment.payment_id),
+    resolver.getPaymentEventsByPaymentIds([payment.payment_id]),
   ])
 
   result.order = order
   result.orders = order ? [order] : []
   result.relatedPayments = relatedPayments
+  result.paymentEvents = paymentEvents
 
   const [merchant, store] = await Promise.all([
     resolver.getMerchant(payment.merchant_id),
@@ -138,6 +146,7 @@ async function correlateByPaymentId(paymentId, options = {}) {
   )
 
   if (!order) result.warnings.push('No order found for this payment (order_id may be outside current sample data)')
+  if (paymentEvents.length === 0) result.warnings.push('No payment_events found for this payment')
   if (result.apiLogs.length === 0) result.warnings.push('No API logs found for this payment')
   if (result.terminalEvents.length === 0 && result.inferredMatches.length === 0) {
     result.warnings.push('No terminal events found for this payment')
@@ -229,7 +238,9 @@ async function correlateByTerminalId(terminalId, options = {}) {
   result.terminalEvents = tagConfidence(terminalEvents, 'confirmed')
 
   const orderIds = orders.map((o) => o.order_id)
-  result.payments = await resolver.getPaymentsByOrderIds(orderIds)
+  const payments = await resolver.getPaymentsByOrderIds(orderIds)
+  result.payments = payments
+  result.paymentEvents = await resolver.getPaymentEventsByPaymentIds(payments.map((p) => p.payment_id))
 
   if (orders.length === 0) result.warnings.push('No orders found for this terminal in the current sample data')
   if (apiLogs.length === 0) result.warnings.push('No API logs found for this terminal')

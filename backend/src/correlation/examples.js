@@ -23,7 +23,7 @@ function printResult(label, result) {
   console.log(`merchant: ${result.merchant?.merchant_id || null}`)
   console.log(`store:    ${result.store?.store_id || null}`)
   console.log(`terminal: ${result.terminal?.terminal_id || null}`)
-  console.log(`orders: ${result.orders.length}, payments: ${result.payments.length}, apiLogs: ${result.apiLogs.length}, terminalEvents: ${result.terminalEvents.length}, inferredMatches: ${result.inferredMatches.length}`)
+  console.log(`orders: ${result.orders.length}, payments: ${result.payments.length}, paymentEvents: ${result.paymentEvents.length}, apiLogs: ${result.apiLogs.length}, terminalEvents: ${result.terminalEvents.length}, inferredMatches: ${result.inferredMatches.length}`)
   if (result.warnings.length) console.log('warnings:', result.warnings)
   console.log(`timeline (${result.timeline.length} events):`)
   result.timeline.slice(0, 10).forEach((e) => console.log(`  ${e.timestamp}  [${e.sourceTable}] ${e.eventType} — ${e.summary}`))

@@ -25,7 +25,10 @@ function parseResponse(rawText, { incident }) {
   if (!parsed || typeof parsed !== 'object') {
     return {
       executiveSummary: 'The investigation response could not be parsed into a structured result.',
+      detectedIncidents: [],
       probableRootCause: null,
+      alternativeExplanations: [],
+      businessImpact: null,
       confidence: 'LOW',
       investigationSteps: [],
       recommendedActions: [],
@@ -36,7 +39,13 @@ function parseResponse(rawText, { incident }) {
 
   return {
     executiveSummary: typeof parsed.executiveSummary === 'string' ? parsed.executiveSummary : 'No summary provided.',
+    // Sprint 9D.5 additions — same defensive shape as every other array/string
+    // field here: a malformed or missing value degrades to an empty/null
+    // default rather than throwing or passing through unchecked data.
+    detectedIncidents: Array.isArray(parsed.detectedIncidents) ? parsed.detectedIncidents : [],
     probableRootCause: typeof parsed.probableRootCause === 'string' ? parsed.probableRootCause : null,
+    alternativeExplanations: Array.isArray(parsed.alternativeExplanations) ? parsed.alternativeExplanations : [],
+    businessImpact: typeof parsed.businessImpact === 'string' ? parsed.businessImpact : null,
     confidence: VALID_CONFIDENCE.includes(parsed.confidence) ? parsed.confidence : incident.confidence,
     investigationSteps: Array.isArray(parsed.investigationSteps) ? parsed.investigationSteps : [],
     recommendedActions: Array.isArray(parsed.recommendedActions) ? parsed.recommendedActions : [],

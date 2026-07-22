@@ -12,6 +12,12 @@ const DEFAULT_PROVIDER = 'mock'
 // never runs SQL, never reads a CSV. Swapping `options.provider` to a real
 // provider later is the only thing that changes; everything else here stays
 // the same.
+//
+// Sprint 9D.5: `options.siblingIncidents` (all incidents detected on the same
+// correlation, threaded in by investigateAll below) lets the prompt and mock
+// response reference "Detected Incidents" plural — still zero new queries,
+// since incidentEngine.detectIncidents() already returned that full array to
+// whichever controller called investigateAll().
 async function investigate(incident, options = {}) {
   if (!incident) {
     throw new Error('investigate requires an Incident object produced by the Incident Detection Engine')
@@ -23,9 +29,10 @@ async function investigate(incident, options = {}) {
     return createNoInvestigationNeeded({ investigationId, incident })
   }
 
+  const siblingIncidents = options.siblingIncidents || []
   const provider = getProvider(options.provider || DEFAULT_PROVIDER)
-  const prompt = buildPrompt(incident)
-  const rawResponse = await provider.generate(prompt, { incident })
+  const prompt = buildPrompt(incident, siblingIncidents)
+  const rawResponse = await provider.generate(prompt, { incident, siblingIncidents })
   const parsed = parseResponse(rawResponse, { incident })
 
   return createInvestigation({
@@ -40,7 +47,7 @@ async function investigate(incident, options = {}) {
 async function investigateAll(incidents, options = {}) {
   const results = []
   for (const incident of incidents) {
-    results.push(await investigate(incident, options))
+    results.push(await investigate(incident, { ...options, siblingIncidents: incidents }))
   }
   return results
 }

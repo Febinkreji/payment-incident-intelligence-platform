@@ -155,7 +155,38 @@ CREATE TABLE orders (
 
 
 -- =============================================================================
--- FACT — payments
+-- FACT — payments (aggregate) + payment_events (lifecycle log)
+--
+-- Sprint 9C.3 — Payment Domain Model Implementation. Prior to this sprint,
+-- `payments` held one row per source CSV row (i.e. one row per gateway
+-- callback), which meant a single logical payment with multiple lifecycle
+-- updates produced multiple, PK-colliding rows — the root cause of the
+-- Sprint 9C migration slowdown. The approved architecture (locked in
+-- Sprint 9C.2/9C.2A) splits this into two tables:
+--
+--   payments        — one row per logical payment. A PURE derived aggregate:
+--                      every column (besides payment_id) is computed from
+--                      that payment's full payment_events history, never
+--                      written directly from a CSV row. See the aggregation
+--                      rules documented above CREATE TABLE payment_events.
+--   payment_events   — append-only lifecycle log, one row per source CSV
+--                      row / gateway callback, mirroring the full original
+--                      row shape. entry_id (already unique per row in the
+--                      source data) is its natural primary key — no
+--                      invented surrogate key. This is the ONLY table ETL
+--                      writes to directly (importFile()/batchInsert is
+--                      single-table-per-row) — payments is (re)computed from
+--                      it by a separate aggregation step.
+--
+-- Current Status Derivation Rule (must be implemented identically by ETL,
+-- Correlation Engine, Incident Detection, AI Investigation, and the REST
+-- API — no component may substitute a different ordering or tie-breaker):
+--   1. Collect all payment_events rows for a payment_id.
+--   2. ORDER BY event_timestamp DESC, entry_id DESC.
+--   3. The first row after sorting is authoritative — its payment_status and
+--      event_timestamp become payments.current_status/current_status_at.
+-- This DESC "find the latest" sort is distinct from the Timeline's ASC
+-- chronological-narrative sort — the two must never be conflated.
 -- =============================================================================
 
 CREATE TABLE payments (
@@ -166,40 +197,102 @@ CREATE TABLE payments (
     checkout_id             VARCHAR(64),
     currency                VARCHAR(3),
     payment_type            VARCHAR(32) NOT NULL,   -- only 'PURCHASE' observed in samples; see TODO below
-    payment_status          VARCHAR(32) NOT NULL,
-    payment_method          VARCHAR(32),
-    external_request_id     VARCHAR(64),
-    external_request_json   JSONB,
-    external_response_json  JSONB,
-    payee_phone_number      VARCHAR(32),
-    created_at              TIMESTAMPTZ NOT NULL,
-    last_updated_at         TIMESTAMPTZ,
-    request_id              VARCHAR(64),   -- TODO: no FK — possible link to api_logs.request_id, ID lengths didn't match in samples
-    created_by              VARCHAR(64),
-    transaction_id          VARCHAR(64),
-    user_message_id         VARCHAR(64),
-    terminal_message        TEXT,
-    voided                  BOOLEAN NOT NULL DEFAULT false,
-    void_requested_at       TIMESTAMPTZ,
-    void_status             VARCHAR(32),
-    entry_id                VARCHAR(64),
-    store_id                VARCHAR(64) REFERENCES store(store_id),
-    card_brand              VARCHAR(32),
-    terminal_code_raw       JSONB,   -- raw source array, e.g. ["TC000088","TC000090"]; renamed from `terminal_code`
-                                     -- to avoid clashing with the terminal_code dimension table. Normalized form
-                                     -- lives in payment_terminal_code below; this column is kept for traceability.
-    purchase_payment_id     VARCHAR(64) REFERENCES payments(payment_id),
-    reference_payment_id    VARCHAR(64) REFERENCES payments(payment_id),
-    originated_by           VARCHAR(64),
-    import_job_id           BIGINT REFERENCES import_jobs(import_job_id)
+    payment_method           VARCHAR(32),
+    payee_phone_number       VARCHAR(32),
+    created_at               TIMESTAMPTZ NOT NULL,   -- MIN(payment_events.event_timestamp) for this payment_id — true business origination time, derived the same way current_status_at derives MAX. No longer the source CSV row's own created_at (see payment_events.created_at for that).
+    transaction_id           VARCHAR(64),   -- confirmed stable across a payment's lifecycle (Sprint 9C.2A)
+    voided                   BOOLEAN NOT NULL DEFAULT false,
+    void_requested_at        TIMESTAMPTZ,
+    void_status               VARCHAR(32),
+    store_id                 VARCHAR(64) REFERENCES store(store_id),
+    card_brand                VARCHAR(32),   -- denormalized: first non-empty/non-UNKNOWN value seen across this payment's events (NOT "latest wins" — confirmed via evidence, Sprint 9C.2A)
+    purchase_payment_id      VARCHAR(64) REFERENCES payments(payment_id),
+    reference_payment_id     VARCHAR(64) REFERENCES payments(payment_id),
+    originated_by            VARCHAR(64),
+    import_job_id             BIGINT REFERENCES import_jobs(import_job_id),   -- most recent import job whose event touched this aggregate
+    current_status            VARCHAR(32),   -- derived via the Current Status Derivation Rule — never written directly by ETL
+    current_status_at         TIMESTAMPTZ    -- event_timestamp of the payment_events row selected by the Current Status Derivation Rule
 );
 
 COMMENT ON COLUMN payments.payment_type IS
     'TODO: every sampled row (incl. one full-file check of ~690k rows) showed only PURCHASE. '
     'purchase_payment_id/reference_payment_id imply REFUND/VOID types exist elsewhere but were never observed.';
 
-COMMENT ON COLUMN payments.request_id IS
-    'TODO: no FK to api_logs.request_id — sampled ID lengths did not match between the two columns. Verify before enforcing.';
+COMMENT ON COLUMN payments.created_at IS
+    'Sprint 9C.3: MIN(payment_events.event_timestamp) for this payment_id — true business origination time, '
+    'derived the same way current_status_at derives MAX. No longer the source CSV row''s own created_at.';
+
+COMMENT ON COLUMN payments.current_status IS
+    'Derived via the Current Status Derivation Rule from payment_events — never written directly by ETL.';
+
+COMMENT ON COLUMN payments.current_status_at IS
+    'event_timestamp of the payment_events row selected by the Current Status Derivation Rule.';
+
+
+-- =============================================================================
+-- FACT — payment_events (append-only lifecycle log; one row per source CSV
+-- row / gateway callback for a payment. Mirrors the FULL original row shape
+-- ("every CSV row -> one Payment Event") because payments is a PURE derived
+-- aggregate over this table — there is no other path through which CSV data
+-- reaches payments (importFile()/batchInsert is single-table-per-row, and
+-- importManager.js is never modified). See the Current Status Derivation
+-- Rule documented above CREATE TABLE payments.
+--
+-- Aggregation (payments column <- payment_events derivation), all computed
+-- fresh from full event history, never incrementally patched per-file:
+--   current_status, current_status_at  <- Current Status Derivation Rule
+--                                          (ORDER BY event_timestamp DESC, entry_id DESC; first row wins)
+--   created_at                         <- MIN(event_timestamp)
+--   card_brand                        <- first non-empty/non-UNKNOWN value seen, ORDER BY event_timestamp ASC, entry_id ASC
+--   every other payments column        <- copied from the "current" event (the
+--                                          same row selected by the Current
+--                                          Status Derivation Rule) — confirmed
+--                                          stable across a payment's lifecycle
+--                                          (Sprint 9C.2A), so the latest
+--                                          observation is authoritative.
+-- =============================================================================
+
+CREATE TABLE payment_events (
+    entry_id                 VARCHAR(64) PRIMARY KEY,   -- natural key, already unique per row (confirmed Sprint 9C.1/9C.2A) — no invented surrogate key
+    payment_id               VARCHAR(64) NOT NULL,   -- deliberately NO FK to payments(payment_id): payments is derived FROM payment_events (Stage B runs after Stage A), so an event for a brand-new payment_id must be insertable before any payments row exists for it — an FK in this direction would make first-time ingestion impossible
+    payment_status           VARCHAR(32) NOT NULL,
+    event_timestamp          TIMESTAMPTZ NOT NULL,   -- renamed from source `last_updated_at` — the authoritative moment this lifecycle state took effect
+    created_at               TIMESTAMPTZ NOT NULL,   -- the source CSV row's own `created_at` — when this specific event record was created upstream (NOT payments.created_at)
+    order_id                 VARCHAR(64),
+    amount                   BIGINT,
+    merchant_id              VARCHAR(64),
+    checkout_id              VARCHAR(64),
+    currency                 VARCHAR(3),
+    payment_type             VARCHAR(32),
+    payment_method           VARCHAR(32),
+    payee_phone_number       VARCHAR(32),
+    transaction_id           VARCHAR(64),
+    voided                   BOOLEAN,
+    void_requested_at        TIMESTAMPTZ,
+    void_status              VARCHAR(32),
+    store_id                 VARCHAR(64),
+    card_brand               VARCHAR(32),
+    purchase_payment_id      VARCHAR(64),
+    reference_payment_id     VARCHAR(64),
+    originated_by            VARCHAR(64),
+    external_request_id      VARCHAR(64),
+    external_request_json    JSONB,
+    external_response_json   JSONB,
+    request_id               VARCHAR(64),   -- TODO: confirmed NOT to crosswalk to api_logs.request_id/gateway_request_id (Sprint 9C.2A: 0/500 matches) — do not assume a join
+    created_by               VARCHAR(64),
+    status_message             TEXT,   -- renamed from source `user_message_id` — confirmed human-readable status/decline message, never an identifier. Sprint 9C.4A dry run: widened from VARCHAR(64) to TEXT after real production data hit the 64-char cap (e.g. "Transaction declined - Suspected fraudulent activity detected by issuer." = 72 chars) — free-text messages have no reliable max length, same treatment as terminal_message.
+    terminal_message          TEXT,
+    terminal_codes_raw        JSONB,   -- renamed from source `terminal_code`; raw per-event array, e.g. ["TC000088","TC000090"]. Normalized form would live in payment_terminal_code (currently unpopulated by any importer).
+    import_job_id             BIGINT REFERENCES import_jobs(import_job_id)
+);
+
+COMMENT ON TABLE payment_events IS
+    'Append-only payment lifecycle log — one row per source CSV row / gateway callback, '
+    'mirroring the full original row shape. payments is a PURE derived aggregate over this table. '
+    'See the Current Status Derivation Rule documented above CREATE TABLE payments.';
+
+COMMENT ON COLUMN payment_events.request_id IS
+    'TODO: confirmed NOT to crosswalk to api_logs.request_id/gateway_request_id (Sprint 9C.2A: 0/500 matches against 36,737 real api_logs rows). Do not design anything assuming this join exists.';
 
 
 -- =============================================================================
@@ -321,9 +414,17 @@ CREATE INDEX idx_api_logs_request_ts ON api_logs(request_ts);
 -- event_timestamp
 CREATE INDEX idx_terminal_events_event_timestamp ON terminal_events(event_timestamp);
 
--- payment_status / order_status
-CREATE INDEX idx_payments_payment_status ON payments(payment_status);
+-- current_status / order_status / payment_status (payment_events)
+CREATE INDEX idx_payments_current_status ON payments(current_status);
 CREATE INDEX idx_orders_order_status ON orders(order_status);
+CREATE INDEX idx_payment_events_payment_status ON payment_events(payment_status);
+
+-- payment_events — payment_id / event_timestamp / import_job_id
+CREATE INDEX idx_payment_events_payment_id ON payment_events(payment_id);
+CREATE INDEX idx_payment_events_payment_id_event_ts_entry_id
+    ON payment_events(payment_id, event_timestamp DESC, entry_id DESC);   -- exact Current Status Derivation Rule order
+CREATE INDEX idx_payment_events_event_timestamp ON payment_events(event_timestamp);
+CREATE INDEX idx_payment_events_import_job_id ON payment_events(import_job_id);
 
 
 -- =============================================================================
@@ -333,9 +434,9 @@ CREATE INDEX idx_orders_order_status ON orders(order_status);
 CREATE INDEX idx_orders_meta_data_gin ON orders USING GIN (meta_data);
 CREATE INDEX idx_orders_control_functions_gin ON orders USING GIN (control_functions);
 
-CREATE INDEX idx_payments_external_request_json_gin ON payments USING GIN (external_request_json);
-CREATE INDEX idx_payments_external_response_json_gin ON payments USING GIN (external_response_json);
-CREATE INDEX idx_payments_terminal_code_raw_gin ON payments USING GIN (terminal_code_raw);
+CREATE INDEX idx_payment_events_external_request_json_gin ON payment_events USING GIN (external_request_json);
+CREATE INDEX idx_payment_events_external_response_json_gin ON payment_events USING GIN (external_response_json);
+CREATE INDEX idx_payment_events_terminal_codes_raw_gin ON payment_events USING GIN (terminal_codes_raw);
 
 CREATE INDEX idx_api_logs_request_data_gin ON api_logs USING GIN (request_data);
 CREATE INDEX idx_api_logs_request_data_mapped_gin ON api_logs USING GIN (request_data_mapped);

@@ -18,6 +18,12 @@ function createEmptyCorrelationResult({ correlationId, entryPoint }) {
     // too, so callers can rely on either shape consistently.
     orders: [],
     payments: [],
+    // Sprint 9C.3: the full lifecycle log for every payment in `payments`
+    // (one payment can have several payment_events) — ordered by the Current
+    // Status Derivation Rule (event_timestamp DESC, entry_id DESC), not
+    // chronologically. payments.current_status/current_status_at is already
+    // the derived result; consumers needing the full history use this array.
+    paymentEvents: [],
     apiLogs: [],
     terminalEvents: [],
 

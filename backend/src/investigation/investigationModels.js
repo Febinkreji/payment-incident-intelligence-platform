@@ -3,7 +3,14 @@ function createInvestigation({ investigationId, incidentId, parsed, evidenceUsed
     investigationId,
     incidentId,
     executiveSummary: parsed.executiveSummary,
+    // Sprint 9D.5: rule-aware investigation structure — detectedIncidents
+    // (this incident plus any siblings on the same correlation),
+    // alternativeExplanations, and businessImpact are new, additive fields;
+    // everything below them is unchanged from Sprint 6.
+    detectedIncidents: parsed.detectedIncidents,
     probableRootCause: parsed.probableRootCause,
+    alternativeExplanations: parsed.alternativeExplanations,
+    businessImpact: parsed.businessImpact,
     confidence: parsed.confidence,
     evidenceUsed,
     missingEvidence,
@@ -23,7 +30,10 @@ function createNoInvestigationNeeded({ investigationId, incident }) {
     investigationId,
     incidentId: incident.incidentId,
     executiveSummary: 'No incident was detected for this correlation — there is nothing to investigate.',
+    detectedIncidents: [],
     probableRootCause: null,
+    alternativeExplanations: [],
+    businessImpact: null,
     confidence: null,
     evidenceUsed: [],
     missingEvidence: incident.missingEvidence || [],

@@ -12,9 +12,9 @@ const templates = require('../templates')
 // the actual payment_id) instead of being pure boilerplate. That's a mock-only
 // affordance, not part of the provider contract itself.
 async function generate(prompt, options = {}) {
-  const { incident } = options
+  const { incident, siblingIncidents } = options
   const template = (incident && templates[incident.incidentType]) || templates.DEFAULT
-  return template.buildMockResponse(incident)
+  return template.buildMockResponse(incident, siblingIncidents || [])
 }
 
 registerProvider('mock', { generate })

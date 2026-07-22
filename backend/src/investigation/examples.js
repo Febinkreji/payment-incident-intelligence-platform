@@ -13,7 +13,7 @@ require('dotenv').config()
 const { pool } = require('../config/postgres/postgres')
 const { correlateByOrderId } = require('../correlation/correlationEngine')
 const { detectIncidents } = require('../incidents/incidentEngine')
-const { makeSimulatedCorrelation } = require('../incidents/examples')
+const { makeSimulatedCorrelation, makeSimulatedPaymentEvents } = require('../incidents/examples')
 const { investigate } = require('./investigationEngine')
 
 function printInvestigation(label, investigation) {
@@ -37,10 +37,19 @@ async function main() {
   const [realIncident] = detectIncidents(realCorrelation)
   printInvestigation('REAL: PAYMENT_NOT_CREATED', await investigate(realIncident))
 
-  // --- SIMULATED: payment failure.
+  // --- SIMULATED: payment failure. current_status is derived from the
+  // 3-event lifecycle below (Current Status Derivation Rule); the failure
+  // event's own status_message flows into evidence and grounds the
+  // investigation's probableRootCause (see templates.js: findFailureMessage).
+  const paymentFailureEvents = makeSimulatedPaymentEvents('sim-payment-04', [
+    { status: 'PAYMENT_PENDING', minutesOffset: 0 },
+    { status: 'PAYMENT_PROCESSING', minutesOffset: 2 },
+    { status: 'PAYMENT_FAILED', minutesOffset: 4, statusMessage: 'Card declined by issuer — insufficient funds' },
+  ])
   const paymentFailureCorrelation = makeSimulatedCorrelation({
-    payment: { payment_id: 'sim-payment-04', payment_status: 'PAYMENT_FAILED' },
-    payments: [{ payment_id: 'sim-payment-04', payment_status: 'PAYMENT_FAILED' }],
+    payment: { payment_id: 'sim-payment-04', current_status: 'PAYMENT_FAILED', current_status_at: paymentFailureEvents[2].event_timestamp },
+    payments: [{ payment_id: 'sim-payment-04', current_status: 'PAYMENT_FAILED', current_status_at: paymentFailureEvents[2].event_timestamp }],
+    paymentEvents: paymentFailureEvents,
     apiLogs: [{ request_id: 'sim-req-04', status_code: 200, call_type: 'POST', api_url: '/api/payments' }],
   })
   const [paymentFailureIncident] = detectIncidents(paymentFailureCorrelation)
@@ -65,18 +74,30 @@ async function main() {
   printInvestigation('SIMULATED: TERMINAL_ERROR', await investigate(terminalErrorIncident))
 
   // --- SIMULATED: missing API activity.
+  const missingApiActivityEvents = makeSimulatedPaymentEvents('sim-payment-02', [
+    { status: 'PAYMENT_PENDING', minutesOffset: 0 },
+    { status: 'PAYMENT_PROCESSING', minutesOffset: 2 },
+    { status: 'PAYMENT_COMPLETED', minutesOffset: 5 },
+  ])
   const missingApiActivityCorrelation = makeSimulatedCorrelation({
-    payment: { payment_id: 'sim-payment-02', payment_status: 'PAYMENT_COMPLETED' },
-    payments: [{ payment_id: 'sim-payment-02', payment_status: 'PAYMENT_COMPLETED' }],
+    payment: { payment_id: 'sim-payment-02', current_status: 'PAYMENT_COMPLETED', current_status_at: missingApiActivityEvents[2].event_timestamp },
+    payments: [{ payment_id: 'sim-payment-02', current_status: 'PAYMENT_COMPLETED', current_status_at: missingApiActivityEvents[2].event_timestamp }],
+    paymentEvents: missingApiActivityEvents,
     apiLogs: [],
   })
   const [missingApiActivityIncident] = detectIncidents(missingApiActivityCorrelation)
   printInvestigation('SIMULATED: MISSING_API_ACTIVITY', await investigate(missingApiActivityIncident))
 
   // --- No incident -> investigate() should short-circuit without calling the provider.
+  const cleanEvents = makeSimulatedPaymentEvents('sim-payment-01', [
+    { status: 'PAYMENT_PENDING', minutesOffset: 0 },
+    { status: 'PAYMENT_PROCESSING', minutesOffset: 3 },
+    { status: 'PAYMENT_COMPLETED', minutesOffset: 6 },
+  ])
   const cleanCorrelation = makeSimulatedCorrelation({
-    payment: { payment_id: 'sim-payment-01', payment_status: 'PAYMENT_COMPLETED' },
-    payments: [{ payment_id: 'sim-payment-01', payment_status: 'PAYMENT_COMPLETED' }],
+    payment: { payment_id: 'sim-payment-01', current_status: 'PAYMENT_COMPLETED', current_status_at: cleanEvents[2].event_timestamp },
+    payments: [{ payment_id: 'sim-payment-01', current_status: 'PAYMENT_COMPLETED', current_status_at: cleanEvents[2].event_timestamp }],
+    paymentEvents: cleanEvents,
     apiLogs: [{ request_id: 'sim-req-01', status_code: 200, call_type: 'POST', api_url: '/api/payments' }],
   })
   const [noIncident] = detectIncidents(cleanCorrelation)

@@ -9,9 +9,12 @@ function evaluate(correlation) {
 
   return {
     ruleId: RULE_ID,
+    ruleName: 'Missing API Activity',
     incidentType: INCIDENT_TYPE,
     baseSeverity: 'MEDIUM',
     baseConfidence: 'MEDIUM',
+    description: `${payments.length} payment(s) exist with zero linked api_logs.`,
+    suggestedNextAction: 'Verify the api_logs ingestion pipeline is not silently dropping records for this time range.',
     evidence: payments.map((p) => ({
       type: 'payment',
       record: p,

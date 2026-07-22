@@ -40,6 +40,14 @@ function createIncidentResult({ incidentId, correlation, ruleResult, severity, c
     incidentDetected: true,
     incidentType: ruleResult.incidentType,
     ruleId: ruleResult.ruleId,
+    // Sprint 9D.4: every rule now also states its own name/description/
+    // suggested next action — a per-rule fact (unlike severity/confidence,
+    // which the classifier derives), so it's passed through as-is rather
+    // than computed here. Optional on older rules — falls back to the rule
+    // ID so nothing breaks if a rule hasn't been retrofitted.
+    ruleName: ruleResult.ruleName || ruleResult.ruleId,
+    description: ruleResult.description || null,
+    suggestedNextAction: ruleResult.suggestedNextAction || null,
     severity,
     confidence,
     ...affectedFields(correlation),

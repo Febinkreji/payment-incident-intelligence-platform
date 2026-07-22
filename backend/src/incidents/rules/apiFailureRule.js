@@ -9,9 +9,12 @@ function evaluate(correlation) {
 
   return {
     ruleId: RULE_ID,
+    ruleName: 'API Server Error',
     incidentType: INCIDENT_TYPE,
     baseSeverity: 'HIGH',
     baseConfidence: 'HIGH',
+    description: `${failedLogs.length} API call(s) returned a 5xx server error.`,
+    suggestedNextAction: 'Check the affected endpoint’s server logs and recent deployments around the failure timestamps.',
     evidence: failedLogs.map((log) => ({
       type: 'api_log',
       record: log,

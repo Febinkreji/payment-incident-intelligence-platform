@@ -21,16 +21,25 @@ export function IncidentsPanel({ incidents }) {
       {detected.map((incident) => (
         <div key={incident.incidentId} className="investigation-incident-card">
           <div className="investigation-incident-header">
-            <span className="investigation-incident-title">{incident.incidentType}</span>
+            <span className="investigation-incident-title">{incident.ruleName || incident.incidentType}</span>
             <SeverityBadge severity={incident.severity} />
             <span className={`badge badge-confidence-${incident.confidence.toLowerCase()}`}>
               {incident.confidence} confidence
             </span>
           </div>
 
+          {incident.description && <p className="investigation-incident-description">{incident.description}</p>}
+
           <strong>Evidence</strong>
           <EvidencePanel evidence={incident.evidence} />
           <MissingEvidencePanel missingEvidence={incident.missingEvidence} />
+
+          {incident.suggestedNextAction && (
+            <div className="investigation-incident-next-action">
+              <strong>Suggested Next Action</strong>
+              <p>{incident.suggestedNextAction}</p>
+            </div>
+          )}
 
           <AIInvestigationPanel investigation={incident.investigation} />
         </div>

@@ -20,7 +20,7 @@ async function getHealth(req, res) {
       databaseReachable,
       timestamp: new Date().toISOString(),
     },
-    databaseReachable ? 200 : 503
+    { statusCode: databaseReachable ? 200 : 503 }
   )
 }
 

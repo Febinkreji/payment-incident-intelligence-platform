@@ -10,10 +10,13 @@ function evaluate(correlation) {
 
   return {
     ruleId: RULE_ID,
+    ruleName: 'Terminal Error Cluster',
     incidentType: INCIDENT_TYPE,
     baseSeverity: 'MEDIUM',
     severityOverride: errorEvents.length >= HIGH_SEVERITY_THRESHOLD ? 'HIGH' : undefined,
     baseConfidence: 'HIGH',
+    description: `${errorEvents.length} ERROR event(s) reported by this terminal.`,
+    suggestedNextAction: 'Dispatch a remote diagnostic to the terminal, or contact the merchant if it appears offline.',
     evidence: errorEvents.map((e) => ({
       type: 'terminal_event',
       record: e,
