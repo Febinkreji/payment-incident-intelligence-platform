@@ -10,6 +10,8 @@ import { Reports } from './pages/Reports'
 import { Runbooks } from './pages/Runbooks'
 import { Settings } from './pages/Settings'
 import { Profile } from './pages/Profile'
+import { Investigation } from './pages/Investigation'
+import { Health } from './pages/Health'
 import { LoginPage } from './pages/LoginPage'
 import { ProtectedRoute } from './components/ProtectedRoute'
 
@@ -30,6 +32,8 @@ function App() {
           <Route path="/runbooks" element={<Runbooks />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/investigate" element={<Investigation />} />
+          <Route path="/health" element={<Health />} />
         </Route>
       </Route>
     </Routes>

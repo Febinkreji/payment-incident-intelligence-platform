@@ -12,6 +12,7 @@ const searchRoutes = require('./modules/search/routes/search.routes')
 const notificationRoutes = require('./modules/notifications/routes/notification.routes')
 const authRoutes = require('./modules/auth/routes/auth.routes')
 const adminRoutes = require('./modules/admin/routes/admin.routes')
+const postgresApi = require('./api/api')
 
 const app = express()
 
@@ -38,5 +39,11 @@ app.use('/', searchRoutes)
 app.use('/', notificationRoutes)
 app.use('/', authRoutes)
 app.use('/', adminRoutes)
+
+// Mounted under /api rather than '/' — the existing routes above already
+// occupy bare /health, /incidents, and /incidents/:id for the Firestore-based
+// app; this keeps the new Postgres-backed engines' endpoints collision-free
+// without touching any of them.
+app.use('/api', postgresApi)
 
 module.exports = app

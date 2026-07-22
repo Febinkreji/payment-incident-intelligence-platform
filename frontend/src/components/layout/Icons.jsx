@@ -33,6 +33,23 @@ export function IncidentIcon(props) {
   )
 }
 
+export function InvestigationIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="10.5" cy="10.5" r="6.5" />
+      <line x1="15.5" y1="15.5" x2="21" y2="21" />
+    </svg>
+  )
+}
+
+export function HealthIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <polyline points="2,13 6,13 8.5,7 11,17 13.5,10 15.5,13 22,13" />
+    </svg>
+  )
+}
+
 export function MonitoringIcon(props) {
   return (
     <svg {...base} {...props}>

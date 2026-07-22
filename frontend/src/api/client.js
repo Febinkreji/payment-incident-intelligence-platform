@@ -2,7 +2,7 @@ import { auth } from '../firebase'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
 
-async function authorizedFetch(path, options = {}) {
+export async function authorizedFetch(path, options = {}) {
   const token = auth?.currentUser ? await auth.currentUser.getIdToken() : null
 
   const headers = {
@@ -25,7 +25,7 @@ function isGetRequest(options) {
 // individual caller receives.
 const inFlightGetRequests = new Map()
 
-function dedupedGet(cacheKey, run) {
+export function dedupedGet(cacheKey, run) {
   const existing = inFlightGetRequests.get(cacheKey)
   if (existing) return existing
 

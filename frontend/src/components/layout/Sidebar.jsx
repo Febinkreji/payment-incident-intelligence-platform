@@ -8,6 +8,8 @@ import {
   ReportsIcon,
   RunbooksIcon,
   SettingsIcon,
+  InvestigationIcon,
+  HealthIcon,
   MenuIcon,
 } from './Icons'
 import './Sidebar.css'
@@ -15,12 +17,14 @@ import './Sidebar.css'
 const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', Icon: DashboardIcon, end: true },
   { to: '/incidents', label: 'Incident Management', Icon: IncidentIcon },
+  { to: '/investigate', label: 'Investigation', Icon: InvestigationIcon },
   { to: '/monitoring', label: 'Live Monitoring', Icon: MonitoringIcon },
   { to: '/evidence', label: 'Evidence Sources', Icon: EvidenceIcon },
   { to: '/analytics', label: 'Analytics', Icon: AnalyticsIcon },
   { to: '/reports', label: 'Reports', Icon: ReportsIcon },
   { to: '/runbooks', label: 'Runbooks', Icon: RunbooksIcon },
   { to: '/settings', label: 'Settings', Icon: SettingsIcon },
+  { to: '/health', label: 'System Health', Icon: HealthIcon },
 ]
 
 export function Sidebar({ collapsed, onToggleCollapse, onNavigate, className = '' }) {
