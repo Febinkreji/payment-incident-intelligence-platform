@@ -7,9 +7,9 @@ const TYPE_OPTIONS = [
   { value: 'terminal', label: 'Terminal ID' },
 ]
 
-export function EntityLookupForm({ onSubmit, isLoading }) {
-  const [type, setType] = useState('order')
-  const [value, setValue] = useState('')
+export function EntityLookupForm({ onSubmit, isLoading, initialType, initialId }) {
+  const [type, setType] = useState(initialType || 'order')
+  const [value, setValue] = useState(initialId || '')
 
   function handleSubmit(event) {
     event.preventDefault()

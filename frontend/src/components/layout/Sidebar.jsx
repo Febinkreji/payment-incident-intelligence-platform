@@ -9,6 +9,7 @@ import {
   RunbooksIcon,
   SettingsIcon,
   InvestigationIcon,
+  ScreeningIcon,
   HealthIcon,
   MenuIcon,
 } from './Icons'
@@ -17,6 +18,7 @@ import './Sidebar.css'
 const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', Icon: DashboardIcon, end: true },
   { to: '/incidents', label: 'Incident Management', Icon: IncidentIcon },
+  { to: '/screening', label: 'Operational Screening', Icon: ScreeningIcon },
   { to: '/investigate', label: 'Investigation', Icon: InvestigationIcon },
   { to: '/monitoring', label: 'Live Monitoring', Icon: MonitoringIcon },
   { to: '/evidence', label: 'Evidence Sources', Icon: EvidenceIcon },

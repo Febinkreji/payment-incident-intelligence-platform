@@ -8,6 +8,7 @@ const incidentRoutes = require('./routes/incidentRoutes')
 const investigationRoutes = require('./routes/investigationRoutes')
 const analyzeRoutes = require('./routes/analyzeRoutes')
 const apiLogRoutes = require('./routes/apiLogRoutes')
+const screeningRoutes = require('./routes/screeningRoutes')
 
 const router = Router()
 
@@ -19,6 +20,7 @@ router.use(incidentRoutes)
 router.use(investigationRoutes)
 router.use(analyzeRoutes)
 router.use(apiLogRoutes)
+router.use(screeningRoutes)
 
 // Sprint 9D.7: a path that matches no route above (e.g. a missing/empty ID
 // segment, like a trailing slash with nothing after it) previously fell

@@ -42,6 +42,17 @@ export function InvestigationIcon(props) {
   )
 }
 
+export function ScreeningIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="4.5" />
+      <line x1="12" y1="3" x2="12" y2="7.5" />
+      <line x1="12" y1="12" x2="18" y2="7" />
+    </svg>
+  )
+}
+
 export function HealthIcon(props) {
   return (
     <svg {...base} {...props}>

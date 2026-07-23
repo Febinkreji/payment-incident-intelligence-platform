@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { PageHeader } from '../components/ui/PageHeader'
 import { EntityLookupForm } from '../components/investigation/EntityLookupForm'
 import { CorrelationSummary } from '../components/investigation/CorrelationSummary'
@@ -12,8 +13,20 @@ import { useAnalysis } from '../hooks/useAnalysis'
 // one HTTP round trip, one correlation/detection/investigation execution
 // server-side, and the response already carries each incident's own
 // investigation nested in it, so there's nothing left for this page to match.
+const VALID_LOOKUP_TYPES = new Set(['order', 'payment', 'terminal'])
+
 export function Investigation() {
-  const [lookup, setLookup] = useState(null) // { type, id } | null
+  const [searchParams] = useSearchParams()
+  const deepLinkType = searchParams.get('type')
+  const deepLinkId = searchParams.get('id')
+  const hasValidDeepLink = VALID_LOOKUP_TYPES.has(deepLinkType) && Boolean(deepLinkId)
+
+  // Sprint: Operational Screening Dashboard — a candidate's "Investigate"
+  // button links here as `/investigate?type=...&id=...` instead of requiring
+  // the operator to re-type an identifier they already have. Falls back to
+  // the original null/manual-entry behavior whenever the link is missing or
+  // malformed, so navigating to /investigate directly is unchanged.
+  const [lookup, setLookup] = useState(hasValidDeepLink ? { type: deepLinkType, id: deepLinkId } : null)
 
   const analysis = useAnalysis(lookup?.type, lookup?.id)
 
@@ -29,7 +42,12 @@ export function Investigation() {
       />
 
       <div className="page-section">
-        <EntityLookupForm onSubmit={handleSubmit} isLoading={analysis.status === 'loading'} />
+        <EntityLookupForm
+          onSubmit={handleSubmit}
+          isLoading={analysis.status === 'loading'}
+          initialType={lookup?.type}
+          initialId={lookup?.id}
+        />
       </div>
 
       {!lookup && <p className="ui-empty-state">Enter an identifier above to begin an investigation.</p>}

@@ -1,0 +1,306 @@
+/* Operational Screening Dashboard — page layout + the screening/ component
+   folder's shared styles. Every color/spacing value here is one of the
+   existing design tokens from index.css; nothing is hardcoded, so this
+   inherits light/dark theming automatically like every other page. */
+
+.screening-filters-card {
+  padding: var(--space-5);
+  margin-bottom: var(--space-8);
+}
+
+.screening-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-4);
+}
+
+.screening-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 150px;
+}
+
+.screening-filter-field label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.screening-filter-field select,
+.screening-filter-field input {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  color: var(--text-h);
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.screening-filter-range {
+  flex-direction: row;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.screening-filter-range label {
+  margin-right: 2px;
+}
+
+.screening-filter-apply-range {
+  background: var(--accent);
+  color: var(--accent-contrast, #fff);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 7px 14px;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.screening-filter-rules-select {
+  min-height: 84px;
+}
+
+.screening-filter-search {
+  flex: 1 1 240px;
+}
+
+/* Table */
+
+.screening-table-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-elevated);
+}
+
+.screening-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.screening-table th {
+  text-align: left;
+  padding: var(--space-3) var(--space-4);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.screening-table td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.screening-row {
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.screening-row:hover {
+  background: var(--bg-elevated-hover, color-mix(in srgb, var(--accent) 6%, transparent));
+}
+
+.screening-row-details td {
+  background: color-mix(in srgb, var(--accent) 4%, transparent);
+  padding: var(--space-5) var(--space-6);
+}
+
+.screening-cell-entity-type {
+  text-transform: capitalize;
+  color: var(--text-muted);
+}
+
+.screening-cell-entity-id {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 0.8rem;
+}
+
+.screening-cell-reason,
+.screening-cell-evidence,
+.screening-cell-action {
+  max-width: 240px;
+  color: var(--text-body, var(--text-h));
+}
+
+.screening-cell-timestamp {
+  white-space: nowrap;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* Rule chips */
+
+.screening-rule-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.screening-rule-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-h);
+  white-space: nowrap;
+}
+
+.screening-rule-chip-more {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  align-self: center;
+}
+
+/* Investigate button */
+
+.screening-investigate-button {
+  background: var(--accent);
+  color: var(--accent-contrast, #fff);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 6px 14px;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.screening-investigate-button:hover {
+  filter: brightness(1.08);
+}
+
+/* Expanded candidate details */
+
+.screening-candidate-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.screening-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--space-5);
+}
+
+.screening-details-block h4 {
+  margin: 0 0 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+}
+
+.screening-details-block p {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+/* Evidence list — label/value rows shared by the details meta block and the
+   full evidence panel */
+
+.screening-evidence-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.screening-evidence-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: 6px var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  font-size: 0.82rem;
+}
+
+.screening-evidence-row dt {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.screening-evidence-row dd {
+  margin: 0;
+  text-align: right;
+  word-break: break-word;
+}
+
+/* Pagination */
+
+.screening-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.screening-pagination button {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 7px 16px;
+  color: var(--text-h);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85rem;
+  transition: border-color 0.12s ease;
+}
+
+.screening-pagination button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.screening-pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* KPI cards showing text (window label / generated-at) rather than a number
+   need a smaller font than the default 1.7rem numeric kpi-card-value */
+
+.screening-kpi-value-text {
+  font-size: 0.95rem !important;
+  font-weight: 600 !important;
+}
+
+@media (max-width: 700px) {
+  .screening-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .screening-cell-reason,
+  .screening-cell-evidence,
+  .screening-cell-action {
+    max-width: 160px;
+  }
+}
