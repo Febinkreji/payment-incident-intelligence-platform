@@ -9,7 +9,19 @@ import { useScreening, useScreeningRules } from '../hooks/useScreening'
 import './Screening.css'
 
 const PAGE_SIZE = 50
-const DEFAULT_FILTERS = { preset: 'last-hour', offset: 0, limit: PAGE_SIZE }
+
+// Demo default: this dashboard's production dataset is a fixed historical
+// snapshot (23 Jun – 7 Jul 2026), not live traffic — defaulting to a
+// relative preset like "Last Hour" would show an empty dashboard against
+// real data on first load. No `preset` key is set here at all; the absence
+// of `preset` combined with `from`/`to` present is exactly what
+// screeningController.js's parseWindow already treats as a custom range
+// (the same code path a manually-applied custom range takes) — nothing in
+// the engine or repository layer knows this is a "default" versus a
+// user-picked range.
+const DEMO_DEFAULT_FROM = '2026-06-23T00:00:00.000Z'
+const DEMO_DEFAULT_TO = '2026-07-07T23:59:59.999Z'
+const DEFAULT_FILTERS = { from: DEMO_DEFAULT_FROM, to: DEMO_DEFAULT_TO, offset: 0, limit: PAGE_SIZE }
 
 const HAS_ACTIVE_NARROWING_FILTER = (filters) =>
   Boolean(filters.priority || filters.entityType || (filters.ruleIds && filters.ruleIds.length > 0) || filters.search)

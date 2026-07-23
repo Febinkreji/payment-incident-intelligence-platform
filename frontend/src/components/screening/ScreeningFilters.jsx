@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { toDatetimeLocalInputValue } from '../../utils/screeningFormat'
 
 const WINDOW_OPTIONS = [
   { value: 'last-15-minutes', label: 'Last 15 Minutes' },
@@ -25,7 +26,10 @@ const SEARCH_DEBOUNCE_MS = 400
 // draft (so a half-typed datetime doesn't fire a request on every keystroke).
 export function ScreeningFilters({ filters, rules, rulesStatus, onChange }) {
   const [searchDraft, setSearchDraft] = useState(filters.search || '')
-  const [rangeDraft, setRangeDraft] = useState({ from: filters.from || '', to: filters.to || '' })
+  const [rangeDraft, setRangeDraft] = useState({
+    from: toDatetimeLocalInputValue(filters.from),
+    to: toDatetimeLocalInputValue(filters.to),
+  })
   const debounceRef = useRef(null)
 
   // No "Clear Filters" action exists yet that would reset filters.search

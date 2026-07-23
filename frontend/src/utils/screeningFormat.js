@@ -9,6 +9,20 @@ export function formatTimestamp(iso) {
   return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString()
 }
 
+// <input type="datetime-local"> requires "YYYY-MM-DDTHH:mm" (no timezone,
+// no seconds/milliseconds) — a raw ISO string like "2026-06-23T00:00:00.000Z"
+// won't populate the field. This is the local-time counterpart to
+// ScreeningFilters.jsx's handleApplyRange, which does `new Date(value).toISOString()`
+// to go the other direction — round-tripping through the same local-time
+// interpretation both ways.
+export function toDatetimeLocalInputValue(iso) {
+  if (!iso) return ''
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
 export function truncate(text, maxLength = 90) {
   if (!text) return ''
   return text.length > maxLength ? `${text.slice(0, maxLength - 1)}…` : text
